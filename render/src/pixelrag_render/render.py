@@ -86,13 +86,13 @@ def render_urls(
     Returns:
         List of Path objects pointing to created tile directories.
     """
-    if backend in ("cdp", "websocket"):
-        from .backends.websocket import render_urls as _render_urls
+    if backend in ("cdp", "websocket"):  # "websocket" kept as a back-compat alias
+        from .backends.cdp import render_urls as _render_urls
     else:
         raise ValueError(
-            f"Unknown backend: {backend!r}. Choose 'cdp' or 'websocket'."
-            " For high-throughput batch rendering with custom Chrome,"
-            " use pixelrag_render.backends.fast_cdp.render_articles() directly."
+            f"Unknown backend: {backend!r}. Choose 'cdp'."
+            " The cdp backend auto-selects a turbo capture path when a turbo-capable"
+            " Chrome is present."
         )
 
     return _render_urls(
@@ -277,6 +277,14 @@ def main() -> None:
         help="Browser viewport width in pixels (default: 875).",
     )
     parser.add_argument(
+        "--wait-network-idle",
+        action="store_true",
+        help="After the page's load event, also wait until the network is quiet "
+        "(~500ms) before capturing. Helps JS/SPA pages that fetch content after "
+        "load; adds a quiet window per page, so off by default. Recommended for "
+        "single-page renders (e.g. the pixelbrowse skill).",
+    )
+    parser.add_argument(
         "--dpi",
         type=int,
         default=200,
@@ -313,6 +321,7 @@ def main() -> None:
             quality=args.quality,
             viewport_width=args.viewport_width,
             workers=args.workers,
+            wait_network_idle=args.wait_network_idle,
         )
         results.extend(tile_dirs)
 
@@ -334,6 +343,7 @@ def main() -> None:
                     quality=args.quality,
                     viewport_width=args.viewport_width,
                     workers=1,
+                    wait_network_idle=args.wait_network_idle,
                 )
             elif suffix in {".png", ".jpg", ".jpeg", ".webp"}:
                 tile_dirs = render_file(fpath, output_dir)
